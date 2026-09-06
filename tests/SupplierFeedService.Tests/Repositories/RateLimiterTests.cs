@@ -1,4 +1,6 @@
 using Dapper;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using SupplierFeedService.Api.Data;
@@ -12,6 +14,7 @@ public sealed class RateLimiterTests : IAsyncLifetime
 {
     private readonly TempSqliteFixture _fixture = new();
     private readonly FakeTimeProvider _timeProvider = new(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
+    private readonly FakeLogger<SlidingWindowRateLimiter> _logger = new();
     private ISlidingWindowRateLimiter _rateLimiter = null!;
 
     public async Task InitializeAsync()
@@ -19,10 +22,24 @@ public sealed class RateLimiterTests : IAsyncLifetime
         await _fixture.InitializeAsync();
         var repository = new RateLimitLogRepository(_fixture.ConnectionFactory);
         var options = Options.Create(new SupplierFeedOptions { MaxRequestsPerWindow = 100, WindowSeconds = 60 });
-        _rateLimiter = new SlidingWindowRateLimiter(repository, options, _timeProvider);
+        _rateLimiter = new SlidingWindowRateLimiter(repository, options, _timeProvider, _logger);
     }
 
     public Task DisposeAsync() => _fixture.DisposeAsync();
+
+    [Fact]
+    public async Task Throttled_request_logs_a_warning()
+    {
+        for (var i = 0; i < 100; i++)
+        {
+            await _rateLimiter.TryAcquireAsync("supplier-1");
+        }
+
+        await _rateLimiter.TryAcquireAsync("supplier-1");
+
+        var warning = Assert.Single(_logger.Collector.GetSnapshot(), record => record.Level == LogLevel.Warning);
+        Assert.Contains("supplier-1", warning.Message);
+    }
 
     [Fact]
     public async Task Exactly_100_requests_are_all_allowed()

@@ -36,25 +36,4 @@ one SQLite file. See `CLAUDE.md` for architecture/commands.
 
 ## What I'd do differently with more time
 
-- **Rate-limiter timestamps are per-instance wall-clock**, not centrally synchronized - a small,
-  mostly-theoretical accuracy gap under real clock drift between instances. Not fixed.
-- **The rate-limit check and the reservation write are two separate transactions**; a failure
-  between them could consume rate-limit budget without a matching stats entry. Not fixed.
-- **The `SQLITE_BUSY`/`SQLITE_LOCKED` retry path is effectively unexercised** - `busy_timeout`
-  likely absorbs all contention this test suite can generate before the retry logic ever
-  triggers. Not fixed.
-- **No authentication binds a request to an actual supplier** - anyone can claim any
-  `supplierId`. Left out because it's a real product decision (API keys? mTLS? HMAC?) outside
-  the given spec, but it's the first thing I'd want before this touched real traffic.
-- **No global exception handling / structured error responses** for unhandled exceptions in
-  non-Development environments - deferred since the spec's scope was the two endpoints'
-  functional behavior, not production error-handling posture.
-- **Domain-level validation is still shallow**: required fields, a positive price, and a
-  slash-free `supplierId` are enforced, but things like `checkIn < checkOut` or ID whitespace
-  trimming aren't - left out since the spec never described these as requirements, and I didn't
-  want to guess at unstated business rules.
-
-Two related gaps that looked cheap to close were fixed rather than deferred: the rate limiter's
-100/101 boundary is now also tested under genuine concurrent load (not just sequentially), and
-the cross-instance correctness (two independent server instances sharing one file) that was
-previously only checked by hand with `curl` now has an automated regression test.
+<!-- TODO: fill in -->

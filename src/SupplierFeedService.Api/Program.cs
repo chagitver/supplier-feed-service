@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using SupplierFeedService.Api.Data;
+using SupplierFeedService.Api.Diagnostics;
 using SupplierFeedService.Api.Options;
 using SupplierFeedService.Api.Services;
 
@@ -12,6 +13,9 @@ builder.Services.AddControllers()
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.Configure<SupplierFeedOptions>(builder.Configuration.GetSection(SupplierFeedOptions.SectionName));
 builder.Services.AddSingleton(TimeProvider.System);
@@ -27,6 +31,8 @@ builder.Services.AddScoped<IReservationIngestService, ReservationIngestService>(
 var app = builder.Build();
 
 await DatabaseInitializer.InitializeAsync(app.Services.GetRequiredService<ISqliteConnectionFactory>());
+
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
